@@ -5,12 +5,11 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build && electron .",
-    "dev": "tsc && electron .",
-    "package": "npm run build && electron-builder",
-    "package:linux": "npm run build && electron-builder --linux",
-    "package:win": "npm run build && electron-builder --win",
-    "package:mac": "npm run build && electron-builder --mac"
+    "rebuild:native": "bunx electron-rebuild -f -w node-hid",
+    "start": "bun run build && bun run rebuild:native && electron .",
+    "dev": "tsc && bun run rebuild:native && electron .",
+    "package": "bun run build && bun run rebuild:native && electron-builder --linux AppImage",
+    "package:linux": "bun run package"
   },
   "author": {
     "name": "Terence",
@@ -21,6 +20,7 @@
     "@types/node": "^20.10.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.6.0",
     "typescript": "^5.3.0"
   },
   "dependencies": {
@@ -35,22 +35,11 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "category": "Utility",
       "maintainer": "Terence <terence@users.noreply.github.com>"
     },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ]
-    }
+    "npmRebuild": false
   }
 }

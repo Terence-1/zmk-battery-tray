@@ -1,6 +1,6 @@
 # ZMK Battery Tray
 
-A system tray application for monitoring ZMK split keyboard battery levels over USB HID.
+A vibecoded system tray application for monitoring ZMK split keyboard battery levels over USB HID.
 
 ## Features
 
@@ -37,31 +37,20 @@ CONFIG_ZMK_BATTERY_REPORTING=y
 CONFIG_BT_BAS=y
 ```
 
-## Installation
-
-### From Source
+## Install & Build
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
-# Build and run
-npm start
+# Run locally (rebuilds TypeScript first)
+bun start
 
-# Or for development
-npm run dev
-```
+# Hot reload during development
+bun run dev
 
-### Building Releases
-
-```bash
-# Build for current platform
-npm run package
-
-# Build for specific platforms
-npm run package:linux
-npm run package:win
-npm run package:mac
+# Produce a Linux AppImage in release/
+bun run package
 ```
 
 ## Usage
