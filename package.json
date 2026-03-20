@@ -12,7 +12,10 @@
     "package:win": "npm run build && electron-builder --win",
     "package:mac": "npm run build && electron-builder --mac"
   },
-  "author": "",
+  "author": {
+    "name": "Terence",
+    "email": "terence@users.noreply.github.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -35,7 +38,8 @@
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "Terence <terence@users.noreply.github.com>"
     },
     "win": {
       "target": [
