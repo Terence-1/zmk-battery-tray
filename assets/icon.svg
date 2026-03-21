@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="64" fill="#1a1a2e"/>
+  
+  <!-- Left battery -->
+  <rect x="80" y="100" width="140" height="280" rx="20" ry="20" fill="none" stroke="#44CC44" stroke-width="16"/>
+  <rect x="120" y="70" width="60" height="35" rx="10" ry="10" fill="#44CC44"/>
+  <rect x="96" y="140" width="108" height="224" rx="10" fill="#44CC44"/>
+  
+  <!-- Right battery -->
+  <rect x="280" y="100" width="140" height="280" rx="20" ry="20" fill="none" stroke="#FFCC00" stroke-width="16"/>
+  <rect x="320" y="70" width="60" height="35" rx="10" ry="10" fill="#FFCC00"/>
+  <rect x="296" y="200" width="108" height="164" rx="10" fill="#FFCC00"/>
+  
+  <!-- ZMK text -->
+  <text x="256" y="460" font-family="sans-serif" font-size="48" font-weight="bold" fill="#ffffff" text-anchor="middle">ZMK</text>
+</svg>

@@ -33,12 +33,14 @@
     "directories": {
       "output": "release"
     },
+    "icon": "assets/icon.png",
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Utility",
-      "maintainer": "Terence <terence@users.noreply.github.com>"
+      "maintainer": "Terence <terence@users.noreply.github.com>",
+      "icon": "assets/icon.png"
     },
     "npmRebuild": false
   }
