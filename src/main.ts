@@ -40,10 +40,14 @@ function getThemeColors(): { bg: string; text: string } {
 }
 
 /**
- * Get color based on battery level
+ * Get color based on battery level, with theme awareness for unknown state
  */
 function getBatteryColor(level: number | null): string {
-  if (level === null) return '#888888'; // Gray for unknown
+  if (level === null) {
+    // Use theme-appropriate gray for unknown
+    const isDark = nativeTheme.shouldUseDarkColors;
+    return isDark ? '#AAAAAA' : '#666666';
+  }
   if (level <= 10) return '#FF4444';    // Red for critical
   if (level <= 25) return '#FF8800';    // Orange for low
   if (level <= 50) return '#FFCC00';    // Yellow for medium
@@ -53,13 +57,17 @@ function getBatteryColor(level: number | null): string {
 /**
  * Create SVG content for battery icon
  * Two battery icons side by side - left position = left half, right position = right half
+ * Adapts outline color to system theme for visibility
  */
 function createSvgContent(leftLevel: number | null, rightLevel: number | null): string {
   const width = 200;
   const height = 200;
   
-  const leftColor = getBatteryColor(leftLevel);
-  const rightColor = getBatteryColor(rightLevel);
+  const isDark = nativeTheme.shouldUseDarkColors;
+  const outlineColor = isDark ? '#FFFFFF' : '#000000';
+  
+  const leftFillColor = getBatteryColor(leftLevel);
+  const rightFillColor = getBatteryColor(rightLevel);
   
   // Battery body dimensions
   const batteryWidth = 80;
@@ -70,15 +78,17 @@ function createSvgContent(leftLevel: number | null, rightLevel: number | null): 
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <!-- Left battery -->
-  <rect x="5" y="25" width="${batteryWidth}" height="${batteryHeight}" rx="12" ry="12" fill="none" stroke="${leftColor}" stroke-width="8"/>
-  <rect x="25" y="10" width="40" height="18" rx="6" ry="6" fill="${leftColor}"/>
-  <rect x="13" y="${35 + batteryFillHeight - leftFill}" width="${batteryWidth - 16}" height="${leftFill}" rx="6" fill="${leftColor}"/>
+  <!-- Left battery outline -->
+  <rect x="5" y="25" width="${batteryWidth}" height="${batteryHeight}" rx="12" ry="12" fill="none" stroke="${outlineColor}" stroke-width="8"/>
+  <rect x="25" y="10" width="40" height="18" rx="6" ry="6" fill="${outlineColor}"/>
+  <!-- Left battery fill -->
+  <rect x="13" y="${35 + batteryFillHeight - leftFill}" width="${batteryWidth - 16}" height="${leftFill}" rx="6" fill="${leftFillColor}"/>
   
-  <!-- Right battery -->
-  <rect x="105" y="25" width="${batteryWidth}" height="${batteryHeight}" rx="12" ry="12" fill="none" stroke="${rightColor}" stroke-width="8"/>
-  <rect x="125" y="10" width="40" height="18" rx="6" ry="6" fill="${rightColor}"/>
-  <rect x="113" y="${35 + batteryFillHeight - rightFill}" width="${batteryWidth - 16}" height="${rightFill}" rx="6" fill="${rightColor}"/>
+  <!-- Right battery outline -->
+  <rect x="105" y="25" width="${batteryWidth}" height="${batteryHeight}" rx="12" ry="12" fill="none" stroke="${outlineColor}" stroke-width="8"/>
+  <rect x="125" y="10" width="40" height="18" rx="6" ry="6" fill="${outlineColor}"/>
+  <!-- Right battery fill -->
+  <rect x="113" y="${35 + batteryFillHeight - rightFill}" width="${batteryWidth - 16}" height="${rightFill}" rx="6" fill="${rightFillColor}"/>
 </svg>`;
 }
 
