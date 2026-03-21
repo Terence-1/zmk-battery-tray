@@ -58,7 +58,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "ZMK Battery Tray ${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
           body: |
             ## ZMK Battery Tray
             
