@@ -29,7 +29,7 @@
   },
   "build": {
     "appId": "com.zmk.battery-tray",
-    "productName": "ZMK Battery Tray",
+    "productName": "zmk-battery-tray",
     "directories": {
       "output": "release"
     },
