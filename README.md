@@ -1,6 +1,8 @@
 # ZMK Battery Tray
 
-A vibecoded system tray application for monitoring ZMK split keyboard battery levels over USB HID.
+A system tray application for monitoring ZMK split keyboard battery levels over USB HID.
+
+> **Note:** This application was built with the assistance of AI (Claude).
 
 ## Features
 
