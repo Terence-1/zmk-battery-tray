@@ -45,7 +45,8 @@
     "deb": {
       "depends": [
         "libusb-1.0-0",
-        "libudev1"
+        "libudev1",
+        "libvips42t64"
       ]
     },
     "npmRebuild": false
