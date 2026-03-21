@@ -5,11 +5,11 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "rebuild:native": "bunx electron-rebuild -f -w node-hid",
-    "start": "bun run build && bun run rebuild:native && electron .",
-    "dev": "tsc && bun run rebuild:native && electron .",
-    "package": "bun run build && bun run rebuild:native && electron-builder --linux AppImage",
-    "package:linux": "bun run package"
+    "rebuild:native": "npx electron-rebuild -f -w node-hid",
+    "start": "npm run build && npm run rebuild:native && electron .",
+    "dev": "tsc && electron .",
+    "package": "npm run build && npm run rebuild:native && electron-builder --linux AppImage",
+    "package:linux": "npm run package"
   },
   "author": {
     "name": "Terence",
