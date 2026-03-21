@@ -58,7 +58,33 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          name: "ZMK Battery Tray ${{ github.ref_name }}"
+          body: |
+            ## ZMK Battery Tray
+            
+            System tray application for monitoring ZMK split keyboard battery levels over USB HID.
+            
+            ### Features
+            - Shows battery levels for both halves of a split keyboard
+            - Color-coded battery fill (green/yellow/orange/red)
+            - Theme-aware icons (adapts to light/dark system theme)
+            - Auto-reconnects when device is plugged in
+            - Tooltip shows exact percentages on hover
+            
+            ### Installation
+            1. Download the AppImage
+            2. Make it executable: `chmod +x ZMK-Battery-Tray-*.AppImage`
+            3. Run it: `./ZMK-Battery-Tray-*.AppImage`
+            
+            ### Linux HID Access
+            If the app can't detect your keyboard, create a udev rule:
+            ```bash
+            echo 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="615e", MODE="0666"' | sudo tee /etc/udev/rules.d/99-zmk.rules
+            sudo udevadm control --reload-rules && sudo udevadm trigger
+            ```
+            
+            ### Requirements
+            - ZMK firmware with [zmk-usb-reporting](https://github.com/Terence-1/zmk-usb-reporting) module
           files: artifacts/*.AppImage
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
