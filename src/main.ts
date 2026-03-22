@@ -1,11 +1,15 @@
 /**
  * ZMK Battery Tray - Main Electron Process
  * System tray application for monitoring ZMK split keyboard battery levels
+ * 
+ * Uses Sharp to dynamically generate battery icons at runtime, similar to
+ * how phones display battery levels with smooth fill indicators.
  */
 
 import { app, Tray, Menu, nativeImage, NativeImage, nativeTheme } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Resvg } from '@resvg/resvg-js';
 import { ZMKBatteryReader, BatteryLevels } from './battery-reader';
 
 // Disable sandbox on Linux (required for development without root permissions)
@@ -19,58 +23,136 @@ let currentLevels: BatteryLevels = { left: null, right: null, timestamp: new Dat
 // Polling interval in milliseconds (1 minute)
 const POLL_INTERVAL = 60000;
 
+// Icon dimensions
+const ICON_SIZE = 22; // Standard tray icon size for Linux
+const BATTERY_WIDTH = 8;
+const BATTERY_HEIGHT = 16;
+const BATTERY_GAP = 4;
+const TERMINAL_HEIGHT = 2;
+
+// Cache for generated icons
+const iconCache = new Map<string, NativeImage>();
+
 /**
- * Convert battery percentage to level bucket (0-4)
- * 0 = null/empty, 1 = critical (1-10%), 2 = low (11-25%), 3 = medium (26-50%), 4 = good (51-100%)
+ * Get color for battery level (smooth gradient like phone)
+ * Green (>50%) -> Yellow (26-50%) -> Orange (11-25%) -> Red (<=10%)
  */
-function getLevelBucket(percent: number | null): number {
-  if (percent === null || percent === 0) return 0;
-  if (percent <= 10) return 1;
-  if (percent <= 25) return 2;
-  if (percent <= 50) return 3;
-  return 4;
+function getBatteryColor(percent: number | null): string {
+  if (percent === null) return '#808080'; // Gray for unknown
+  if (percent <= 10) return '#FF4444'; // Red - critical
+  if (percent <= 25) return '#FF8C00'; // Orange - low
+  if (percent <= 50) return '#FFD700'; // Yellow - medium
+  return '#44CC44'; // Green - good
 }
 
 /**
- * Get pre-generated icon path
+ * Generate SVG for a single battery with smooth fill
  */
-function getIconPath(leftLevel: number | null, rightLevel: number | null): string {
-  const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
-  const leftBucket = getLevelBucket(leftLevel);
-  const rightBucket = getLevelBucket(rightLevel);
-  const filename = `battery_${theme}_${leftBucket}_${rightBucket}.png`;
+function generateBatterySVG(
+  x: number,
+  percent: number | null,
+  outlineColor: string
+): string {
+  const fillColor = getBatteryColor(percent);
+  const fillPercent = percent ?? 0;
   
-  // Try different paths for dev vs packaged
-  const possiblePaths = [
-    path.join(__dirname, '..', 'assets', 'icons', filename),
-    path.join(__dirname, '..', '..', 'assets', 'icons', filename),
-    path.join(app.getAppPath(), 'assets', 'icons', filename),
-  ];
+  // Battery body dimensions
+  const bodyY = TERMINAL_HEIGHT;
+  const bodyHeight = BATTERY_HEIGHT - TERMINAL_HEIGHT;
   
-  for (const iconPath of possiblePaths) {
-    if (fs.existsSync(iconPath)) {
-      return iconPath;
-    }
+  // Fill height based on percentage (from bottom up)
+  const maxFillHeight = bodyHeight - 2; // 1px padding top and bottom
+  const fillHeight = Math.round((fillPercent / 100) * maxFillHeight);
+  const fillY = bodyY + 1 + (maxFillHeight - fillHeight);
+  
+  // Terminal (top nub)
+  const terminalWidth = 4;
+  const terminalX = x + (BATTERY_WIDTH - terminalWidth) / 2;
+  
+  let svg = '';
+  
+  // Terminal (top nub)
+  svg += `<rect x="${terminalX}" y="0" width="${terminalWidth}" height="${TERMINAL_HEIGHT}" fill="${outlineColor}" rx="0.5"/>`;
+  
+  // Battery body outline
+  svg += `<rect x="${x}" y="${bodyY}" width="${BATTERY_WIDTH}" height="${bodyHeight}" fill="none" stroke="${outlineColor}" stroke-width="1.5" rx="1"/>`;
+  
+  // Battery fill (if any)
+  if (fillPercent > 0) {
+    svg += `<rect x="${x + 1}" y="${fillY}" width="${BATTERY_WIDTH - 2}" height="${fillHeight}" fill="${fillColor}" rx="0.5"/>`;
   }
   
-  // Return first path even if doesn't exist (will trigger fallback)
-  return possiblePaths[0];
+  // X mark for disconnected
+  if (percent === null) {
+    const centerX = x + BATTERY_WIDTH / 2;
+    const centerY = bodyY + bodyHeight / 2;
+    const size = 3;
+    svg += `<line x1="${centerX - size}" y1="${centerY - size}" x2="${centerX + size}" y2="${centerY + size}" stroke="${outlineColor}" stroke-width="1.5" stroke-linecap="round"/>`;
+    svg += `<line x1="${centerX + size}" y1="${centerY - size}" x2="${centerX - size}" y2="${centerY + size}" stroke="${outlineColor}" stroke-width="1.5" stroke-linecap="round"/>`;
+  }
+  
+  return svg;
 }
 
 /**
- * Get battery icon for current levels
+ * Generate complete battery icon SVG
  */
-function getBatteryIcon(leftLevel: number | null, rightLevel: number | null): NativeImage {
-  const iconPath = getIconPath(leftLevel, rightLevel);
+function generateIconSVG(leftPercent: number | null, rightPercent: number | null, isDark: boolean): string {
+  const outlineColor = isDark ? '#FFFFFF' : '#000000';
   
-  if (fs.existsSync(iconPath)) {
-    const img = nativeImage.createFromPath(iconPath);
-    if (!img.isEmpty()) {
-      return img;
-    }
+  // Calculate positions to center both batteries
+  const totalWidth = BATTERY_WIDTH * 2 + BATTERY_GAP;
+  const startX = (ICON_SIZE - totalWidth) / 2;
+  const startY = (ICON_SIZE - BATTERY_HEIGHT) / 2;
+  
+  const leftX = startX;
+  const rightX = startX + BATTERY_WIDTH + BATTERY_GAP;
+  
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${ICON_SIZE}" height="${ICON_SIZE}" viewBox="0 0 ${ICON_SIZE} ${ICON_SIZE}">
+    <g transform="translate(0, ${startY})">
+      ${generateBatterySVG(leftX, leftPercent, outlineColor)}
+      ${generateBatterySVG(rightX, rightPercent, outlineColor)}
+    </g>
+  </svg>`;
+}
+
+/**
+ * Generate battery icon using resvg-js
+ */
+function generateBatteryIcon(leftLevel: number | null, rightLevel: number | null): NativeImage {
+  const isDark = nativeTheme.shouldUseDarkColors;
+  const cacheKey = `${leftLevel ?? 'null'}_${rightLevel ?? 'null'}_${isDark}`;
+  
+  // Check cache first
+  const cached = iconCache.get(cacheKey);
+  if (cached) {
+    return cached;
   }
   
-  console.log('Pre-generated icon not found:', iconPath);
+  try {
+    const svg = generateIconSVG(leftLevel, rightLevel, isDark);
+    
+    // Use resvg-js to convert SVG to PNG
+    const resvg = new Resvg(svg, {
+      fitTo: {
+        mode: 'width',
+        value: ICON_SIZE,
+      },
+    });
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
+    
+    const icon = nativeImage.createFromBuffer(pngBuffer);
+    
+    if (!icon.isEmpty()) {
+      // Cache the result
+      iconCache.set(cacheKey, icon);
+      return icon;
+    }
+  } catch (error) {
+    console.error('Error generating battery icon:', error);
+  }
+  
   return getFallbackIcon();
 }
 
@@ -135,9 +217,13 @@ function updateTray(): void {
 
   const { left, right } = currentLevels;
   
-  const icon = getBatteryIcon(left, right);
-  if (!icon.isEmpty()) {
-    tray.setImage(icon);
+  try {
+    const icon = generateBatteryIcon(left, right);
+    if (!icon.isEmpty()) {
+      tray.setImage(icon);
+    }
+  } catch (error) {
+    console.error('Error updating tray icon:', error);
   }
 
   const leftStr = left !== null ? `${left}%` : 'N/A';
@@ -234,10 +320,18 @@ function tryConnect(): void {
 }
 
 /**
+ * Clear icon cache (called on theme change)
+ */
+function clearIconCache(): void {
+  iconCache.clear();
+}
+
+/**
  * Initialize the application
  */
 function createTray(): void {
-  const icon = getBatteryIcon(null, null);
+  // Generate initial icon
+  const icon = generateBatteryIcon(null, null);
   
   console.log(`Default icon: ${icon.getSize().width}x${icon.getSize().height}, empty=${icon.isEmpty()}`);
   
@@ -261,7 +355,8 @@ app.whenReady().then(() => {
   createTray();
   
   nativeTheme.on('updated', () => {
-    console.log('Theme changed, updating icon...');
+    console.log('Theme changed, clearing cache and updating icon...');
+    clearIconCache();
     updateTray();
   });
 });
