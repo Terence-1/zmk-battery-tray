@@ -293,17 +293,42 @@ function updateContextMenu(): void {
   tray.setContextMenu(contextMenu);
 }
 
+// Reconnection timer
+let reconnectTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Schedule a reconnection attempt
+ */
+function scheduleReconnect(delayMs: number = 5000): void {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+  }
+  console.log(`Scheduling reconnection in ${delayMs}ms...`);
+  reconnectTimer = setTimeout(tryConnect, delayMs);
+}
+
 /**
  * Try to connect to ZMK device
  */
 function tryConnect(): void {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
   if (batteryReader) {
     batteryReader.disconnect();
   }
 
   batteryReader = new ZMKBatteryReader();
   
-  if (batteryReader.connect()) {
+  if (batteryReader.connect(() => {
+    // Called when device disconnects
+    console.log('Device disconnected, will attempt to reconnect...');
+    currentLevels = { left: null, right: null, timestamp: new Date() };
+    updateTray();
+    scheduleReconnect(5000);
+  })) {
     console.log('Connected to ZMK device');
     
     batteryReader.startPolling(POLL_INTERVAL, (levels) => {
@@ -315,7 +340,7 @@ function tryConnect(): void {
     currentLevels = { left: null, right: null, timestamp: new Date() };
     updateTray();
     
-    setTimeout(tryConnect, 10000);
+    scheduleReconnect(10000);
   }
 }
 

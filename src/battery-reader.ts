@@ -37,6 +37,7 @@ export class ZMKBatteryReader {
   private pollInterval: NodeJS.Timeout | null = null;
   private lastLevels: BatteryLevels = { left: null, right: null, timestamp: new Date() };
   private onUpdateCallback: ((levels: BatteryLevels) => void) | null = null;
+  private onDisconnectCallback: (() => void) | null = null;
 
   /**
    * Find ZMK battery HID device (interface 3)
@@ -98,31 +99,27 @@ export class ZMKBatteryReader {
   /**
    * Connect to a ZMK battery HID device
    */
-  connect(devicePath?: string): boolean {
+  connect(onDisconnect?: () => void): boolean {
     try {
+      this.onDisconnectCallback = onDisconnect || null;
+
       // List devices for debugging
       ZMKBatteryReader.listAllDevices();
 
-      if (devicePath) {
-        this.device = new HID.HID(devicePath);
-        this.devicePath = devicePath;
-        console.log(`Connected to specified path: ${devicePath}`);
-      } else {
-        // Find the battery HID device
-        const batteryDevice = ZMKBatteryReader.findBatteryDevice();
-        if (!batteryDevice) {
-          console.error('No ZMK battery device found');
-          return false;
-        }
-        
-        try {
-          this.device = new HID.HID(batteryDevice.path);
-          this.devicePath = batteryDevice.path;
-          console.log(`Connected to: ${batteryDevice.product || batteryDevice.path} (interface ${batteryDevice.interface})`);
-        } catch (e) {
-          console.error(`Failed to open device ${batteryDevice.path}:`, e);
-          return false;
-        }
+      // Find the battery HID device
+      const batteryDevice = ZMKBatteryReader.findBatteryDevice();
+      if (!batteryDevice) {
+        console.error('No ZMK battery device found');
+        return false;
+      }
+      
+      try {
+        this.device = new HID.HID(batteryDevice.path);
+        this.devicePath = batteryDevice.path;
+        console.log(`Connected to: ${batteryDevice.product || batteryDevice.path} (interface ${batteryDevice.interface})`);
+      } catch (e) {
+        console.error(`Failed to open device ${batteryDevice.path}:`, e);
+        return false;
       }
 
       if (!this.device) {
@@ -131,7 +128,11 @@ export class ZMKBatteryReader {
 
       this.device.on('error', (err) => {
         console.error('HID device error:', err);
+        const callback = this.onDisconnectCallback;
         this.disconnect();
+        if (callback) {
+          callback();
+        }
       });
 
       return true;
