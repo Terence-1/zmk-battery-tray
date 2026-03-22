@@ -34,7 +34,7 @@
     "directories": {
       "output": "release"
     },
-    "icon": "assets/icon.png",
+    "icon": "assets/app-icon.png",
     "files": [
       "dist/**/*",
       "assets/**/*",
@@ -46,7 +46,7 @@
       ],
       "category": "Utility",
       "maintainer": "Terence <terence@users.noreply.github.com>",
-      "icon": "assets/icon.png"
+      "icon": "assets/app-icon.png"
     },
     "deb": {
       "depends": [
