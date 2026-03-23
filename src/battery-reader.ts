@@ -38,6 +38,7 @@ export class ZMKBatteryReader {
   private lastLevels: BatteryLevels = { left: null, right: null, timestamp: new Date() };
   private onUpdateCallback: ((levels: BatteryLevels) => void) | null = null;
   private onDisconnectCallback: (() => void) | null = null;
+  private consecutiveFailures: number = 0;
 
   /**
    * Find ZMK battery HID device (interface 3)
@@ -102,6 +103,7 @@ export class ZMKBatteryReader {
   connect(onDisconnect?: () => void): boolean {
     try {
       this.onDisconnectCallback = onDisconnect || null;
+      this.consecutiveFailures = 0;
 
       // List devices for debugging
       ZMKBatteryReader.listAllDevices();
@@ -172,10 +174,22 @@ export class ZMKBatteryReader {
       const data = this.device.getFeatureReport(reportId, 2);
       if (data && data.length >= 2) {
         console.log(`Report ${reportId}: got ${data[0]}, ${data[1]}`);
+        this.consecutiveFailures = 0;
         return data[1];
       }
     } catch (e: any) {
       console.log(`getFeatureReport(${reportId}) failed: ${e.message}`);
+      this.consecutiveFailures++;
+      
+      // If we have multiple consecutive failures, device is likely disconnected
+      if (this.consecutiveFailures >= 2) {
+        console.log('Multiple read failures, treating as disconnect');
+        const callback = this.onDisconnectCallback;
+        this.disconnect();
+        if (callback) {
+          callback();
+        }
+      }
     }
 
     return null;
