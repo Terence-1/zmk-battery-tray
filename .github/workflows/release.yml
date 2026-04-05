@@ -39,7 +39,9 @@ jobs:
           done
 
       - name: Build .deb package
-        run: npm run package:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
@@ -47,16 +49,25 @@ jobs:
           name: linux-build
           path: release/*.deb
 
+      - name: Upload release files artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: |
+            release/*.deb
+            release/*.yml
+            release/*.yaml
+
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Download .deb artifact
+      - name: Download release files
         uses: actions/download-artifact@v4
         with:
-          name: linux-build
+          name: release-files
           path: artifacts
 
       - name: List artifacts
@@ -78,6 +89,8 @@ jobs:
             - Theme-aware icons (adapts to light/dark system theme)
             - Auto-reconnects when device is plugged in
             - Tooltip shows exact percentages on hover
+            - **Auto-update support** - automatically checks for new versions
+            - **Configurable left/right swap** - fix incorrect side reporting
             
             ### Installation
             ```bash
@@ -94,6 +107,9 @@ jobs:
             
             ### Requirements
             - ZMK firmware with [zmk-usb-reporting](https://github.com/Terence-1/zmk-usb-reporting) module
-          files: artifacts/*.deb
+          files: |
+            artifacts/*.deb
+            artifacts/*.yml
+            artifacts/*.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

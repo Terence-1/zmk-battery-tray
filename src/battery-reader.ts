@@ -39,6 +39,7 @@ export class ZMKBatteryReader {
   private onUpdateCallback: ((levels: BatteryLevels) => void) | null = null;
   private onDisconnectCallback: (() => void) | null = null;
   private consecutiveFailures: number = 0;
+  private swapSides: boolean = false;
 
   /**
    * Find ZMK battery HID device (interface 3)
@@ -199,10 +200,14 @@ export class ZMKBatteryReader {
    * Read both battery levels
    */
   readBatteryLevels(): BatteryLevels {
-    const left = this.readBatteryReport(BATTERY_REPORT_ID_LEFT);
-    const right = this.readBatteryReport(BATTERY_REPORT_ID_RIGHT);
+    const leftRaw = this.readBatteryReport(BATTERY_REPORT_ID_LEFT);
+    const rightRaw = this.readBatteryReport(BATTERY_REPORT_ID_RIGHT);
     
-    console.log(`Battery levels: left=${left}%, right=${right}%`);
+    // Swap sides if configured (to handle incorrect connection order)
+    const left = this.swapSides ? rightRaw : leftRaw;
+    const right = this.swapSides ? leftRaw : rightRaw;
+    
+    console.log(`Battery levels: left=${left}%, right=${right}% (swapped=${this.swapSides})`);
     
     this.lastLevels = {
       left,
@@ -211,6 +216,21 @@ export class ZMKBatteryReader {
     };
 
     return this.lastLevels;
+  }
+
+  /**
+   * Set whether to swap left/right sides
+   */
+  setSwapSides(swap: boolean): void {
+    this.swapSides = swap;
+    console.log(`Swap sides: ${swap}`);
+  }
+
+  /**
+   * Get current swap setting
+   */
+  getSwapSides(): boolean {
+    return this.swapSides;
   }
 
   /**

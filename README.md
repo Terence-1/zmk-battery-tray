@@ -7,14 +7,18 @@ A system tray application for monitoring ZMK split keyboard battery levels over 
 ## Features
 
 - Shows battery levels for both halves of a split keyboard in the system tray
-- Color-coded icons:
+- Dynamic battery fill visualization (shows exact percentage like a phone)
+- Color-coded battery indicators:
   - Green: >50%
   - Yellow: 26-50%
   - Orange: 11-25%
   - Red: ≤10%
   - Gray: Not connected
+- Theme-aware icons (adapts to system light/dark mode)
 - Automatic device detection and reconnection
 - Polls battery levels every 60 seconds
+- **Auto-update support** - automatically checks for and installs updates
+- **Swap left/right sides** - configurable option to fix incorrect side reporting (when peripherals connect in the wrong order)
 
 ## Requirements
 
@@ -62,10 +66,20 @@ bun run package
 3. The tray icon will show battery levels for both halves
 4. Hover over the icon to see exact percentages
 5. Right-click for menu options:
-   - View battery levels
+   - View battery levels and connection status
+   - **Swap Left/Right Sides** - toggle if sides are reporting incorrectly
    - Refresh manually
    - Reconnect device
+   - **Check for Updates** - manually check for new versions
    - Quit
+
+### Fixing Wrong Side Reporting
+
+If the left and right battery levels are swapped (due to Bluetooth connection order), you can fix this without reflashing firmware:
+
+1. Right-click the tray icon
+2. Check **"Swap Left/Right Sides"**
+3. The setting is saved automatically and persists across restarts
 
 ## Linux Notes
 

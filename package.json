@@ -9,7 +9,8 @@
     "start": "npm run build && npm run rebuild:native && electron .",
     "dev": "tsc && electron .",
     "package": "npm run build && npm run rebuild:native && electron-builder --linux deb --publish never",
-    "package:linux": "npm run package"
+    "package:linux": "npm run package",
+    "release": "npm run build && npm run rebuild:native && electron-builder --linux deb --publish always"
   },
   "author": {
     "name": "Terence",
@@ -17,8 +18,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "node-hid": "^3.0.0",
-    "@resvg/resvg-js": "^2.6.2"
+    "@resvg/resvg-js": "^2.6.2",
+    "electron-updater": "^6.8.3",
+    "node-hid": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -39,6 +41,11 @@
       "assets/**/*",
       "node_modules/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "Terence-1",
+      "repo": "zmk-battery-tray"
+    },
     "linux": {
       "target": [
         "deb"

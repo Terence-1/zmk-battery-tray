@@ -11,6 +11,86 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Resvg } from '@resvg/resvg-js';
 import { ZMKBatteryReader, BatteryLevels } from './battery-reader';
+import { autoUpdater } from 'electron-updater';
+
+// Settings file path
+const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
+
+interface Settings {
+  swapSides: boolean;
+}
+
+// Load settings from file
+function loadSettings(): Settings {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+  return { swapSides: false };
+}
+
+// Save settings to file
+function saveSettings(settings: Settings): void {
+  try {
+    const dir = path.dirname(SETTINGS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
+}
+
+// Current settings
+let settings: Settings = loadSettings();
+
+// Configure auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+// Auto-updater state
+let updateAvailable = false;
+let updateDownloaded = false;
+let updateVersion = '';
+
+// Auto-updater event handlers
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for updates...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info.version);
+  updateAvailable = true;
+  updateVersion = info.version;
+  updateContextMenu();
+});
+
+autoUpdater.on('update-not-available', () => {
+  console.log('No updates available');
+  updateAvailable = false;
+  updateContextMenu();
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Auto-updater error:', err);
+  updateAvailable = false;
+  updateContextMenu();
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`Download progress: ${progressObj.percent.toFixed(1)}%`);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info.version);
+  updateDownloaded = true;
+  updateContextMenu();
+});
 
 // Disable sandbox on Linux (required for development without root permissions)
 app.commandLine.appendSwitch('no-sandbox');
@@ -245,7 +325,7 @@ function updateContextMenu(): void {
   const timeStr = timestamp.toLocaleTimeString();
   const connected = batteryReader?.isConnected() ?? false;
 
-  const contextMenu = Menu.buildFromTemplate([
+  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
     {
       label: `Left Half: ${leftStr}`,
       enabled: false,
@@ -265,6 +345,23 @@ function updateContextMenu(): void {
     },
     { type: 'separator' },
     {
+      label: 'Swap Left/Right Sides',
+      type: 'checkbox',
+      checked: settings.swapSides,
+      click: () => {
+        settings.swapSides = !settings.swapSides;
+        saveSettings(settings);
+        if (batteryReader) {
+          batteryReader.setSwapSides(settings.swapSides);
+          if (batteryReader.isConnected()) {
+            currentLevels = batteryReader.readBatteryLevels();
+            updateTray();
+          }
+        }
+      },
+    },
+    { type: 'separator' },
+    {
       label: 'Refresh Now',
       click: () => {
         if (batteryReader?.isConnected()) {
@@ -281,15 +378,43 @@ function updateContextMenu(): void {
         tryConnect();
       },
     },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
+  ];
 
+  // Add update menu items if available
+  if (updateDownloaded) {
+    menuTemplate.push({ type: 'separator' });
+    menuTemplate.push({
+      label: `Install Update (${updateVersion}) and Restart`,
+      click: () => {
+        autoUpdater.quitAndInstall();
+      },
+    });
+  } else if (updateAvailable) {
+    menuTemplate.push({ type: 'separator' });
+    menuTemplate.push({
+      label: `Download Update (${updateVersion})`,
+      click: () => {
+        autoUpdater.downloadUpdate();
+      },
+    });
+  }
+
+  menuTemplate.push({ type: 'separator' });
+  menuTemplate.push({
+    label: 'Check for Updates',
+    click: () => {
+      autoUpdater.checkForUpdates();
+    },
+  });
+  menuTemplate.push({ type: 'separator' });
+  menuTemplate.push({
+    label: 'Quit',
+    click: () => {
+      app.quit();
+    },
+  });
+
+  const contextMenu = Menu.buildFromTemplate(menuTemplate);
   tray.setContextMenu(contextMenu);
 }
 
@@ -321,6 +446,7 @@ function tryConnect(): void {
   }
 
   batteryReader = new ZMKBatteryReader();
+  batteryReader.setSwapSides(settings.swapSides);
   
   if (batteryReader.connect(() => {
     // Called when device disconnects
@@ -378,6 +504,13 @@ app.on('window-all-closed', (e: Event) => {
 // Initialize when ready
 app.whenReady().then(() => {
   createTray();
+  
+  // Check for updates on startup (after a delay to let app settle)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.log('Failed to check for updates:', err);
+    });
+  }, 5000);
   
   nativeTheme.on('updated', () => {
     console.log('Theme changed, clearing cache and updating icon...');
